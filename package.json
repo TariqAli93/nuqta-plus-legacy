@@ -1,0 +1,41 @@
+{
+  "name": "nuqtaplus",
+  "version": "1.0.10",
+  "description": "نقطة بلس - نظام إدارة نقاط البيع والمخازن",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "cross-env NODE_ENV=development concurrently \"cd backend && pnpm dev\" \"cd frontend && pnpm dev\"",
+    "dev:web": "cross-env NODE_ENV=development concurrently \"cd backend && pnpm dev\" \"cd frontend && pnpm dev:web\"",
+    "publish:electron": "node pumb-version.js && cd backend && pnpm build && cd ../frontend && pnpm run publish:win",
+    "build": "cd backend && pnpm build && cd ../frontend && pnpm build:win",
+    "lint": "cd backend && pnpm lint && cd ../frontend && pnpm lint",
+    "format": "cd backend && pnpm format && cd ../frontend && pnpm format",
+    "db:migrate": "cd backend && pnpm db:migrate",
+    "db:generate": "cd backend && pnpm db:generate",
+    "seed": "node ./backend/src/seed.js"
+  },
+  "keywords": [
+    "accounting",
+    "pos",
+    "installment",
+    "electron",
+    "vue",
+    "fastify"
+  ],
+  "author": "nuqtaplus Team",
+  "license": "Proprietary",
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "cross-env": "^10.1.0",
+    "eslint": "^9.15.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-vue": "^9.31.0",
+    "fs-extra": "^11.3.2",
+    "prettier": "^3.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

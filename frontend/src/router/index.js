@@ -7,6 +7,7 @@ import MainLayout from '@/layouts/MainLayout.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 
 // Views
+import Activation from '@/views/Activation.vue';
 import Login from '@/views/auth/Login.vue';
 import Dashboard from '@/views/Dashboard.vue';
 import Customers from '@/views/customers/Customers.vue';
@@ -26,6 +27,11 @@ import Profile from '@/views/Profile.vue';
 import About from '@/views/About.vue';
 
 const routes = [
+  {
+    path: '/activation',
+    name: 'Activation',
+    component: Activation,
+  },
   {
     path: '/auth',
     component: AuthLayout,

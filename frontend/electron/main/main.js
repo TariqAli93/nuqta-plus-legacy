@@ -6,6 +6,9 @@ const __dirname = dirname(__filename);
 global.__dirname = __dirname;
 global.__filename = __filename;
 
+import { activate, checkStored } from '../licenseSystem/client-activation.js';
+import { getMachineId } from '../licenseSystem/machine-id.js';
+
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import { promises as fs } from 'fs-extra';
 import logger from '../scripts/logger.js';
@@ -19,10 +22,11 @@ import { generateReceiptHtml } from '../scripts/receiptBuilder.js';
 const isDev = !app.isPackaged;
 
 let mainWindow = null;
-let splashWindow = null; // splash screen window
+let splashWindow = null;
+let activationWindow = null;
 let isQuitting = false;
 let backendReady = false;
-let splashTimeout = null; // timeout for showing main window after splash
+let splashTimeout = null;
 
 const backendManager = new BackendManager();
 
@@ -32,9 +36,10 @@ if (!gotTheLock) {
   app.quit();
 } else {
   app.on('second-instance', () => {
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.focus();
+    const target = mainWindow || activationWindow;
+    if (target) {
+      if (target.isMinimized()) target.restore();
+      target.focus();
     }
   });
 }
@@ -461,6 +466,80 @@ function createWindow() {
 }
 
 // --- نافذة التفعيل ---
+function createActivationWindow() {
+  if (activationWindow) return;
+
+  activationWindow = new BrowserWindow({
+    width: 540,
+    height: 500,
+    resizable: false,
+    center: true,
+    frame: true,
+    show: false,
+    title: 'تفعيل نقطة بلس',
+    icon: isDev ? join(__dirname, '../../build/icon.png') : join(__dirname, '../build/icon.png'),
+    webPreferences: {
+      devTools: isDev,
+      contextIsolation: true,
+      nodeIntegration: false,
+      preload: join(__dirname, '../preload/preload.mjs'),
+    },
+  });
+
+  activationWindow.removeMenu();
+
+  const loadActivationWindow = async () => {
+    if (isDev) {
+      // Dev: Vite dev server + createWebHistory → plain path URL
+      await activationWindow.loadURL('http://localhost:5173/activation');
+      return;
+    }
+
+    // Production: createWebHashHistory → loadFile with { hash: '/activation' }
+    try {
+      const p = path.join(process.resourcesPath, 'dist-electron', 'dist', 'index.html');
+      logger.info(`Trying activation from resources path: ${p}`);
+      await activationWindow.loadFile(p, { hash: '/activation' });
+      logger.info('Loaded activation window from resources path');
+      return;
+    } catch (err) {
+      logger.warn(`Failed activation resources path: ${err.message}`);
+    }
+
+    try {
+      const p = path.join(__dirname, '../../dist/index.html');
+      logger.info(`Trying activation from relative path: ${p}`);
+      await activationWindow.loadFile(p, { hash: '/activation' });
+      logger.info('Loaded activation window from relative path');
+      return;
+    } catch (err) {
+      logger.warn(`Failed activation relative path: ${err.message}`);
+    }
+
+    try {
+      const appPath = app.getAppPath();
+      const p = path.join(appPath, 'dist-electron', 'dist', 'index.html');
+      logger.info(`Trying activation from app path: ${p}`);
+      await activationWindow.loadFile(p, { hash: '/activation' });
+      logger.info('Loaded activation window from app path');
+    } catch (err) {
+      logger.error(`Failed to load activation window: ${err.message}`);
+    }
+  };
+
+  loadActivationWindow().catch((err) => {
+    logger.error(`Activation window load error: ${err.message}`);
+  });
+
+  activationWindow.once('ready-to-show', () => {
+    activationWindow.show();
+    activationWindow.focus();
+  });
+
+  activationWindow.on('closed', () => {
+    activationWindow = null;
+  });
+}
 
 // --- نافذة الـ Splash ---
 function createSplashWindow() {
@@ -476,14 +555,13 @@ function createSplashWindow() {
     show: false,
     icon: isDev ? join(__dirname, '../../build/icon.png') : join(__dirname, '../build/icon.png'),
     webPreferences: {
-      devTools: false, // ← أهم شيء
+      devTools: false,
       contextIsolation: true,
       nodeIntegration: false,
       preload: join(__dirname, '../preload/preload.mjs'),
     },
   });
 
-  // Add error handlers for debugging
   splashWindow.webContents.on(
     'did-fail-load',
     (event, errorCode, errorDescription, validatedURL) => {
@@ -500,9 +578,7 @@ function createSplashWindow() {
   if (isDev) {
     splashWindow.loadFile(path.join(__dirname, '../../splash.html'));
   } else {
-    // Try multiple path resolution strategies for production
     const tryLoadSplash = async () => {
-      // Strategy 1: Try resources path first (for extraResources - most reliable in packaged apps)
       try {
         const resourcesPath = process.resourcesPath;
         const splashPath = path.join(resourcesPath, 'dist-electron', 'dist', 'splash.html');
@@ -514,7 +590,6 @@ function createSplashWindow() {
         logger.warn(`Failed to load splash from resources path: ${err.message}`);
       }
 
-      // Strategy 2: Relative path from main.js location
       try {
         const relativePath = path.join(__dirname, '../../dist/splash.html');
         logger.info(`Trying to load splash from relative path: ${relativePath}`);
@@ -525,7 +600,6 @@ function createSplashWindow() {
         logger.warn(`Failed to load splash from relative path: ${err.message}`);
       }
 
-      // Strategy 3: Using app.getAppPath()
       let lastError;
       try {
         const appPath = app.getAppPath();
@@ -539,7 +613,6 @@ function createSplashWindow() {
         logger.warn(`Failed to load splash from app path: ${err.message}`);
       }
 
-      // All strategies failed
       logger.error(
         `All splash path resolution strategies failed. Last error: ${lastError?.message || 'unknown'}`
       );
@@ -553,7 +626,6 @@ function createSplashWindow() {
 
   splashWindow.once('ready-to-show', () => {
     splashWindow.show();
-    // Track when splash is actually shown for minimum display time
     splashWindow.__shownAt = Date.now();
   });
 
@@ -565,14 +637,12 @@ function tryToShowMainWindowAfterSplash() {
   if (!mainWindow.__readyToShow) return;
   if (!backendReady) return;
 
-  // Clear any existing timeout to prevent multiple calls
   if (splashTimeout) {
     clearTimeout(splashTimeout);
     splashTimeout = null;
   }
 
   const showMainWindow = () => {
-    // Clear timeout reference
     splashTimeout = null;
 
     if (splashWindow) {
@@ -590,7 +660,6 @@ function tryToShowMainWindowAfterSplash() {
   };
 
   if (splashWindow && splashWindow.__shownAt) {
-    // Ensure splash is shown for at least 7 seconds
     const minSplashTime = 7000;
     const timeSinceShown = Date.now() - splashWindow.__shownAt;
     const timeLeft = minSplashTime - timeSinceShown;
@@ -603,34 +672,110 @@ function tryToShowMainWindowAfterSplash() {
       showMainWindow();
     }
   } else {
-    // Fallback: show main window immediately if splash timing not available
     logger.warn('Splash timing not available, showing main window immediately');
     showMainWindow();
   }
 }
 
-app.whenReady().then(async () => {
-  if (isQuitting) return;
-
-  // Create splash immediately and show it
+// --- تشغيل التطبيق الرئيسي بعد التحقق من الترخيص ---
+async function startNormalApp() {
   createSplashWindow();
-
   createWindow();
   try {
     await backendManager.StartBackend();
     backendReady = true;
   } catch (error) {
     logger.error('Failed to start backend, but continuing with UI:', error);
-    // Set backendReady to true anyway so UI can show
-    // Backend errors will be handled by the UI itself
     backendReady = true;
   }
-
   tryToShowMainWindowAfterSplash();
+}
+
+// --- IPC: تفعيل الترخيص ---
+ipcMain.handle('activate-license', async (_event, input) => {
+  try {
+    // input: { type: 'file', path: '...' } | { type: 'key', key: '...' }
+    const licenseInput = input.type === 'file' ? input.path : input.key;
+    const result = activate(licenseInput);
+
+    if (result.valid) {
+      logger.info('License activated successfully');
+
+      // Start the main app FIRST so at least one window exists before
+      // the activation window is destroyed — otherwise window-all-closed
+      // fires with zero windows and the app quits before the main window opens.
+      await startNormalApp();
+
+      if (activationWindow && !activationWindow.isDestroyed()) {
+        activationWindow.destroy();
+        activationWindow = null;
+      }
+
+      return { success: true, license: result.license };
+    } else {
+      logger.warn('License activation failed:', result.error);
+      return { success: false, error: result.error, details: result.details };
+    }
+  } catch (err) {
+    logger.error('License activation error:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+// --- IPC: فتح مربع حوار لاختيار ملف الترخيص ---
+ipcMain.handle('license:browseFile', async () => {
+  const result = await dialog.showOpenDialog(activationWindow || null, {
+    title: 'اختر ملف الترخيص',
+    filters: [{ name: 'License File', extensions: ['lic', 'json'] }],
+    properties: ['openFile'],
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return { canceled: true };
+  }
+
+  return { canceled: false, filePath: result.filePaths[0] };
+});
+
+// --- IPC: معرّف الجهاز (للعرض في نافذة التفعيل فقط) ---
+ipcMain.handle('license:getMachineId', () => {
+  try {
+    return { success: true, machineId: getMachineId() };
+  } catch (err) {
+    logger.error('Failed to get machine ID:', err);
+    return { success: false, machineId: null };
+  }
+});
+
+app.whenReady().then(async () => {
+  if (isQuitting) return;
+
+  // --- التحقق من الترخيص قبل فتح أي نافذة ---
+  let licenseValid = false;
+  try {
+    const result = checkStored();
+    licenseValid = result.valid;
+    if (!result.valid) {
+      logger.warn(`License check failed: ${result.error}`);
+    } else {
+      logger.info('License is valid, starting app normally');
+    }
+  } catch (err) {
+    logger.error(`License check threw: ${err.message}`);
+    licenseValid = false;
+  }
+
+  if (licenseValid) {
+    await startNormalApp();
+  } else {
+    createActivationWindow();
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0 && !isQuitting) {
-      createWindow();
+      if (mainWindow === null && activationWindow === null) {
+        createActivationWindow();
+      }
     }
   });
 });
@@ -649,7 +794,6 @@ app.on('before-quit', async (event) => {
   isQuitting = true;
   event.preventDefault();
 
-  // Clear splash timeout if exists
   if (splashTimeout) {
     clearTimeout(splashTimeout);
     splashTimeout = null;
@@ -694,13 +838,11 @@ ipcMain.handle('backend:start', async () => {
   return { ok: true };
 });
 
-// --- إيقاف backend ---
 ipcMain.handle('backend:stop', async () => {
   await backendManager.CleanupBackendProcess();
   return { ok: true };
 });
 
-// --- إعادة تشغيل backend ---
 ipcMain.handle('backend:restart', async () => {
   await backendManager.CleanupBackendProcess();
   await backendManager.StartBackend();
@@ -713,7 +855,6 @@ ipcMain.handle('backup:restore', async (_e, filename) => {
     const os = await import('os');
     const path = await import('path');
 
-    // Logic to match backend/src/utils/database.js
     const getUserDataDir = () => {
       const platform = process.platform;
       const homeDir = os.homedir();
@@ -734,25 +875,20 @@ ipcMain.handle('backup:restore', async (_e, filename) => {
 
     logger.info(`Restoring backup from: ${backupPath} to ${dbPath}`);
 
-    // 1. Check if backup exists
     try {
       await fs.access(backupPath);
     } catch {
       throw new Error('ملف النسخة الاحتياطية غير موجود');
     }
 
-    // 2. Stop Backend
     logger.info('Stopping backend for restore...');
     await backendManager.CleanupBackendProcess();
 
-    // Wait a bit to ensure file lock is released
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // 3. Replace DB file
     logger.info('Copying backup file...');
     await fs.copyFile(backupPath, dbPath);
 
-    // 4. Restart Backend
     logger.info('Restarting backend...');
     await backendManager.StartBackend();
     backendReady = true;
@@ -760,7 +896,6 @@ ipcMain.handle('backup:restore', async (_e, filename) => {
     return { ok: true };
   } catch (error) {
     logger.error('Failed to restore backup:', error);
-    // Try to restart backend if it failed partially
     try {
       if (!backendManager.isRunning()) {
         await backendManager.StartBackend();
@@ -779,7 +914,6 @@ ipcMain.handle('backup:export', async (_e, filename) => {
     const os = await import('os');
     const path = await import('path');
 
-    // Logic to match backend/src/utils/database.js
     const getUserDataDir = () => {
       const platform = process.platform;
       const homeDir = os.homedir();
@@ -797,14 +931,12 @@ ipcMain.handle('backup:export', async (_e, filename) => {
     const backupDir = path.join(userDataDir, 'database', 'backups');
     const sourcePath = path.join(backupDir, filename);
 
-    // Verify source exists
     try {
       await fs.access(sourcePath);
     } catch {
       throw new Error('ملف النسخة الاحتياطية غير موجود');
     }
 
-    // Show Save Dialog
     const { canceled, filePath: destPath } = await dialog.showSaveDialog(mainWindow, {
       title: 'حفظ النسخة الاحتياطية',
       defaultPath: filename,
@@ -815,7 +947,6 @@ ipcMain.handle('backup:export', async (_e, filename) => {
       return { ok: false, reason: 'canceled' };
     }
 
-    // Copy file
     await fs.copyFile(sourcePath, destPath);
 
     return { ok: true };
@@ -966,6 +1097,67 @@ ipcMain.handle('app:close', () => {
   app.exit(0);
 });
 
+// --- تصدير النسخة الاحتياطية مع تصفير قاعدة البيانات ---
+ipcMain.handle('backup:exportAndCreateNewDatabase', async (_e) => {
+  try {
+    const os = await import('os');
+    const path = await import('path');
+
+    const getUserDataDir = () => {
+      const platform = process.platform;
+      const homeDir = os.homedir();
+      if (platform === 'win32') {
+        return path.join(homeDir, 'AppData', 'Roaming', '@nuqtaplus');
+      } else if (platform === 'darwin') {
+        return path.join(homeDir, 'Library', 'Application Support', '@nuqtaplus');
+      }
+      return path.join(homeDir, '.config', '@nuqtaplus');
+    };
+
+    const userDataDir = getUserDataDir();
+    const dbDir = path.join(userDataDir, 'database');
+    const dbPath = path.join(dbDir, 'nuqtaplus.db');
+
+    const saveLocation = await dialog.showSaveDialog(mainWindow, {
+      title: 'حفظ النسخة الاحتياطية',
+      defaultPath: `nuqtaplus-backup-${new Date().toISOString().slice(0, 10)}.db`,
+      filters: [{ name: 'Database Backup', extensions: ['db'] }],
+    });
+
+    if (saveLocation.canceled || !saveLocation.filePath) {
+      return { ok: false, reason: 'canceled' };
+    }
+
+    await fs.copyFile(dbPath, saveLocation.filePath);
+
+    logger.info('Stopping backend for new database creation...');
+    await backendManager.CleanupBackendProcess();
+
+    logger.info('Deleting current database file...');
+    await fs.unlink(dbPath, { recursive: true });
+
+    logger.info('New database will be created on next backend start.');
+
+    BrowserWindow.getAllWindows().forEach((win) => win.destroy());
+    app.relaunch();
+    app.exit(0);
+    return { ok: true };
+  } catch (error) {
+    logger.error('Failed to export backup and create new database:', error);
+    return { ok: false, error: error.message };
+  } finally {
+    try {
+      if (!backendManager.isRunning()) {
+        logger.info('Restarting backend after new database creation...');
+        await backendManager.StartBackend();
+        backendReady = true;
+      }
+    } catch (e) {
+      logger.error('Failed to restart backend after new database creation:', e);
+    }
+  }
+});
+
 // --- فتح رابط خارجي ---
 ipcMain.handle('shell:openExternal', async (_e, url) => {
   await shell.openExternal(url);
@@ -973,7 +1165,7 @@ ipcMain.handle('shell:openExternal', async (_e, url) => {
 });
 
 ipcMain.handle('update:check', () => {
-  checkForUpdates(true); // ⭐ فحص يدوي فقط
+  checkForUpdates(true); // manual check only
 });
 
 ipcMain.handle('update:download', () => {

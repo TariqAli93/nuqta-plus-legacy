@@ -4,10 +4,25 @@ import vuetify from 'vite-plugin-vuetify';
 import { fileURLToPath, URL } from 'node:url';
 import electron from 'vite-plugin-electron/simple';
 import VueDevTools from 'vite-plugin-vue-devtools';
-import { copyFileSync, existsSync } from 'fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 
+/** Recursively copy a directory (src → dest). */
+function copyDirSync(src, dest) {
+  mkdirSync(dest, { recursive: true });
+  for (const entry of readdirSync(src)) {
+    const srcPath = join(src, entry);
+    const destPath = join(dest, entry);
+    if (statSync(srcPath).isDirectory()) {
+      copyDirSync(srcPath, destPath);
+    } else {
+      copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
 const isDev = process.env.NODE_ENV !== 'production';
+const __root = dirname(fileURLToPath(new URL('.', import.meta.url)));
 
 // NEW: target switch
 // IMPORTANT: Set VITE_TARGET=electron when building for Electron (e.g., in build:win script)
@@ -21,6 +36,20 @@ const copyStaticAssets = () => {
 
   return {
     name: 'copy-static-assets',
+    // Copy licenseSystem next to the main-process bundle so that
+    // createRequire('../licenseSystem/...') resolves correctly at runtime.
+    // Runs in both dev and production whenever the electron main is built.
+    buildStart() {
+      if (isElectronTarget) {
+        const srcLicense = join(__dirname, 'electron', 'licenseSystem');
+        const destLicense = join(__dirname, 'dist-electron', 'licenseSystem');
+        try {
+          copyDirSync(srcLicense, destLicense);
+        } catch (err) {
+          console.warn('Failed to copy licenseSystem:', err.message);
+        }
+      }
+    },
     writeBundle() {
       // Copy only for electron production build
       if (!isDev && isElectronTarget) {
@@ -61,6 +90,23 @@ export default defineConfig({
             main: {
               entry: 'electron/main/main.js',
               vite: {
+                plugins: [
+                  // Copy licenseSystem into dist-electron/licenseSystem/ so that
+                  // createRequire('../licenseSystem/...') in the bundled main.js
+                  // resolves to the correct directory at runtime.
+                  {
+                    name: 'copy-license-system',
+                    buildStart() {
+                      const src = join(__root, 'electron', 'licenseSystem');
+                      const dest = join(__root, 'dist-electron', 'licenseSystem');
+                      try {
+                        copyDirSync(src, dest);
+                      } catch (e) {
+                        console.warn('copy-license-system:', e.message);
+                      }
+                    },
+                  },
+                ],
                 build: {
                   outDir: 'dist-electron/main',
                   minify: true,

@@ -120,11 +120,8 @@ export const useAuthStore = defineStore('auth', {
           this.token = token;
           api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-          // Verify token is still valid by fetching profile
+          // Verify token is still valid by fetching profile (sets this.user from API)
           await this.getProfile();
-
-          // Only set authenticated after successful verification
-          this.user = JSON.parse(user);
           this.isAuthenticated = true;
         } catch {
           // Token is invalid, clear everything

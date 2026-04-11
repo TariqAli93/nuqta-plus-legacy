@@ -71,6 +71,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   restoreBackup: (filename) => ipcRenderer.invoke('backup:restore', filename),
   exportBackup: (filename) => ipcRenderer.invoke('backup:export', filename),
+  exportAndCreateNewDatabase: () => ipcRenderer.invoke('backup:exportAndCreateNewDatabase'),
   importBackup: () => ipcRenderer.invoke('backup:import'),
   clearDatabase: () => ipcRenderer.invoke('database:clear'),
   closeApp: () => ipcRenderer.invoke('app:close'),
@@ -81,4 +82,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
 contextBridge.exposeInMainWorld('splashAPI', {
   getAppVersion: () => ipcRenderer.invoke('app:getVersion'),
+});
+
+// License activation API (safe — no crypto/fs/machineId exposed)
+contextBridge.exposeInMainWorld('licenseAPI', {
+  activate: (input) => ipcRenderer.invoke('activate-license', input),
+  browseFile: () => ipcRenderer.invoke('license:browseFile'),
+  getMachineId: () => ipcRenderer.invoke('license:getMachineId'),
 });

@@ -13,12 +13,13 @@
     <!-- مكون التحميل المركزي -->
     <LoadingSpinner />
 
-    <!-- مكون الإعداد الأولي -->
-    <CreateFirstUser />
+    <!-- مكون الإعداد الأولي — لا يعمل في نافذة التفعيل -->
+    <CreateFirstUser v-if="route.name !== 'Activation'" />
   </v-app>
 </template>
 <script setup>
 import { onMounted, onUnmounted } from 'vue';
+import { useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import AppSnackbar from '@/components/AppSnackbar.vue';
 import AppErrorDialog from '@/components/AppErrorDialog.vue';
@@ -28,6 +29,7 @@ import UpdateNotification from '@/components/UpdateNotification.vue';
 import CreateFirstUser from '@/components/CreateFirstUser.vue';
 
 const authStore = useAuthStore();
+const route = useRoute();
 
 // Block middle-click (button 1) from opening new windows/tabs
 const handleAuxClick = (e) => {
@@ -46,16 +48,15 @@ const handleModifierClick = (e) => {
 };
 
 onMounted(async () => {
-  // Add event listeners to block non-native browser behaviors
   document.addEventListener('auxclick', handleAuxClick, true);
   document.addEventListener('click', handleModifierClick, true);
 
-  // Check if user is logged in
+  // Skip backend-dependent checks when showing the activation window
+  if (route.name === 'Activation') return;
   await authStore.checkAuth();
 });
 
 onUnmounted(() => {
-  // Cleanup event listeners
   document.removeEventListener('auxclick', handleAuxClick, true);
   document.removeEventListener('click', handleModifierClick, true);
 });

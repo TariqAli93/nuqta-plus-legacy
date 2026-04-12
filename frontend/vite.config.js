@@ -22,7 +22,8 @@ function copyDirSync(src, dest) {
 }
 
 const isDev = process.env.NODE_ENV !== 'production';
-const __root = dirname(fileURLToPath(new URL('.', import.meta.url)));
+// Directory containing this config (frontend/). Do NOT use dirname(URL('.', import.meta.url)) — that resolves to repo root and breaks electron/licenseSystem paths.
+const __root = dirname(fileURLToPath(import.meta.url));
 
 // NEW: target switch
 // IMPORTANT: Set VITE_TARGET=electron when building for Electron (e.g., in build:win script)
@@ -146,7 +147,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: 'index.html',
-        activation: 'activation.html',
         splash: 'splash.html',
       },
     },

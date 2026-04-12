@@ -35,6 +35,10 @@
               <v-icon start>mdi-backup-restore</v-icon>
               <span>إدارة النسخ الاحتياطي</span>
             </v-tab>
+            <v-tab value="license">
+              <v-icon start>mdi-license</v-icon>
+              <span>الترخيص</span>
+            </v-tab>
           </v-tabs>
         </v-card>
       </v-col>
@@ -54,6 +58,10 @@
           <v-window-item value="backup" class="pa-0">
             <BackupManager />
           </v-window-item>
+
+          <v-window-item value="license" class="pa-0">
+            <LicenseStatus />
+          </v-window-item>
         </v-window>
       </v-col>
     </v-row>
@@ -67,6 +75,7 @@ import { useRoute } from 'vue-router';
 import CompanyInfoForm from '@/components/settings/CompanyInfoForm.vue';
 import BackupManager from '@/components/settings/BackupManager.vue';
 import CurrencySettings from '@/components/settings/CurrencySettings.vue';
+import LicenseStatus from '@/components/settings/LicenseStatus.vue';
 
 // Stores
 const settingsStore = useSettingsStore();

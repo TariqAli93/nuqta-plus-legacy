@@ -747,6 +747,24 @@ ipcMain.handle('license:getMachineId', () => {
   }
 });
 
+// --- IPC: حالة الترخيص الحالية ---
+ipcMain.handle('license:status', () => {
+  try {
+    const result = checkStored();
+    const machineId = getMachineId();
+    return {
+      success: true,
+      valid: result.valid,
+      error: result.error || null,
+      license: result.valid ? result.license : null,
+      machineId,
+    };
+  } catch (err) {
+    logger.error('Failed to get license status:', err);
+    return { success: false, valid: false, error: err.message, license: null, machineId: null };
+  }
+});
+
 app.whenReady().then(async () => {
   if (isQuitting) return;
 

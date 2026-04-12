@@ -89,4 +89,5 @@ contextBridge.exposeInMainWorld('licenseAPI', {
   activate: (input) => ipcRenderer.invoke('activate-license', input),
   browseFile: () => ipcRenderer.invoke('license:browseFile'),
   getMachineId: () => ipcRenderer.invoke('license:getMachineId'),
+  getStatus: () => ipcRenderer.invoke('license:status'),
 });

@@ -139,10 +139,14 @@ function verifyNativeBinary() {
 function verifyLoadUnderBundledNode() {
   if (!fs.existsSync(BUNDLED_NODE)) {
     if (IS_WIN) {
+      // On Windows the bundled runtime is mandatory — fail hard. fail()
+      // calls process.exit(1), but we return afterwards anyway so the
+      // control flow is explicit and survives any future refactor of fail().
       fail(
         `Bundled Node runtime missing: ${BUNDLED_NODE}\n` +
           'Make sure backend/bin/node.exe is committed to the source tree.'
       );
+      return;
     }
     warn(
       `Bundled Node runtime not present on this platform (${process.platform}); ` +

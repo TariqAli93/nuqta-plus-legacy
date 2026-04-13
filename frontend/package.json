@@ -48,30 +48,17 @@
   "build": {
     "appId": "com.nuqtaplus.app",
     "productName": "نقطة بلس",
+    "asar": true,
     "files": [
       "package.json",
       "dist-electron/**/*",
-      "node_modules/**/*",
-      "backend/**/*"
+      "!**/*.map",
+      "!**/.env*"
     ],
     "extraResources": [
       {
-        "from": "../dist-backend",
-        "to": "backend",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
         "from": "dist-electron",
         "to": "dist-electron",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "../backend/node_modules",
-        "to": "backend/node_modules",
         "filter": [
           "**/*"
         ]
@@ -89,6 +76,7 @@
         "to": "dist-electron/scripts"
       }
     ],
+    "afterPack": "../scripts/afterPack.cjs",
     "directories": {
       "buildResources": "build",
       "output": "../release"

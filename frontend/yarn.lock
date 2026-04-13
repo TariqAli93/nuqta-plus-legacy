@@ -338,7 +338,7 @@
 
 "@electron/rebuild@3.7.0":
   version "3.7.0"
-  resolved "https://registry.npmmirror.com/@electron/rebuild/-/rebuild-3.7.0.tgz"
+  resolved "https://registry.npmjs.org/@electron/rebuild/-/rebuild-3.7.0.tgz"
   integrity sha512-VW++CNSlZwMYP7MyXEbrKjpzEwhB5kDNbzGtiPEjwYysqyTCF+YbNJ210Dj3AjWsGSV4iEEwNkmJN9yGZmVvmw==
   dependencies:
     "@electron/node-gyp" "git+https://github.com/electron/node-gyp.git#06b29aafb7708acef8b3669835c8a7857ebc92d2"
@@ -379,6 +379,11 @@
     fs-extra "^11.1.1"
     minimist "^1.2.8"
     postject "^1.0.0-alpha.6"
+
+"@epic-web/invariant@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.npmjs.org/@epic-web/invariant/-/invariant-1.0.0.tgz"
+  integrity sha512-lrTPqgvfFQtR/eY/qkIzp98OGdNJu0m5ji3q/nJI8v3SXkRKEnWiOxMmbvcSoAIzv/cGiuvRy57k4suKQSAdwA==
 
 "@esbuild/win32-x64@0.25.12":
   version "0.25.12"
@@ -951,6 +956,11 @@ anymatch@~3.1.2:
     normalize-path "^3.0.0"
     picomatch "^2.0.4"
 
+apexcharts@^5.3.6, apexcharts@>=5.10.0:
+  version "5.10.6"
+  resolved "https://registry.npmjs.org/apexcharts/-/apexcharts-5.10.6.tgz"
+  integrity sha512-FJQGbso3iRuOwUYnj0yUhkWeKeJE6aboVol+ae09lsc+lbLMWZqSRbrAWVa/qishLiaeG2icxdvmVkm+9n6kOQ==
+
 app-builder-bin@5.0.0-alpha.12:
   version "5.0.0-alpha.12"
   resolved "https://registry.npmmirror.com/app-builder-bin/-/app-builder-bin-5.0.0-alpha.12.tgz"
@@ -1417,6 +1427,14 @@ cross-dirname@^0.1.0:
   resolved "https://registry.npmjs.org/cross-dirname/-/cross-dirname-0.1.0.tgz"
   integrity sha512-+R08/oI0nl3vfPcqftZRpytksBXDzOUveBq/NBVx0sUp1axwzPQrKinNx5yd5sxPu8j1wIy8AfnVQ+5eFdha6Q==
 
+cross-env@^10.1.0:
+  version "10.1.0"
+  resolved "https://registry.npmjs.org/cross-env/-/cross-env-10.1.0.tgz"
+  integrity sha512-GsYosgnACZTADcmEyJctkJIoqAhHjttw7RsFrVoJNXbsWWqaq6Ym+7kZjq6mS45O0jij6vtiReppKQEtqWy6Dw==
+  dependencies:
+    "@epic-web/invariant" "^1.0.0"
+    cross-spawn "^7.0.6"
+
 cross-spawn@^7.0.1, cross-spawn@^7.0.6:
   version "7.0.6"
   resolved "https://registry.npmmirror.com/cross-spawn/-/cross-spawn-7.0.6.tgz"
@@ -1671,7 +1689,7 @@ electron-winstaller@5.4.0:
   optionalDependencies:
     "@electron/windows-sign" "^1.1.2"
 
-electron@^39.1.1:
+electron@^39.2.7:
   version "39.2.7"
   resolved "https://registry.npmjs.org/electron/-/electron-39.2.7.tgz"
   integrity sha512-KU0uFS6LSTh4aOIC3miolcbizOFP7N1M46VTYVfqIgFiuA2ilfNaOHLDS9tCMvwwHRowAsvqBrh9NgMXcTOHCQ==
@@ -1915,7 +1933,7 @@ fraction.js@^4.3.7:
   resolved "https://registry.npmmirror.com/fraction.js/-/fraction.js-4.3.7.tgz"
   integrity sha512-ZsDfxO51wGAXREY55a7la9LScWpwv9RxIrYABrlvOFBlH/ShPnrtsXeuUIfXKKOVicNxQ+o8JTbJvjS4M89yew==
 
-fs-extra@^10.0.0:
+fs-extra@^10.0.0, fs-extra@^10.1.0:
   version "10.1.0"
   resolved "https://registry.npmmirror.com/fs-extra/-/fs-extra-10.1.0.tgz"
   integrity sha512-oRXApq54ETRj4eMiFzGnHWGy+zo5raudjuxN0b8H7s/RU2oW0Wvsx9O0ACRN/kRq9E8Vu/ReskGB5o3ji+FzHQ==
@@ -2892,11 +2910,6 @@ node-api-version@^0.2.0:
   integrity sha512-2xP/IGGMmmSQpI1+O/k72jF/ykvZ89JeuKX3TLJAYPDVLUalrshrLHkeVcCCZqG/eEa635cr8IBYzgnDvM2O8Q==
   dependencies:
     semver "^7.3.5"
-
-node-machine-id@^1.1.12:
-  version "1.1.12"
-  resolved "https://registry.npmmirror.com/node-machine-id/-/node-machine-id-1.1.12.tgz"
-  integrity sha512-QNABxbrPa3qEIfrE6GOJ7BYIuignnJw7iQ2YPbc3Nla1HzRJjXzZOiikfF8m7eAMfichLt3M4VgLOetqgDmgGQ==
 
 node-releases@^2.0.26:
   version "2.0.27"
@@ -4060,7 +4073,7 @@ vue-to-print@^1.5.1:
   resolved "https://registry.npmmirror.com/vue-to-print/-/vue-to-print-1.5.1.tgz"
   integrity sha512-Z8LeXBmw9J5zQrtcqNQeoFNprgs6ituih682SAOv06ExZljvIjt2CEAW7N1XAjLpgzx9LKMrl500G2ZeGugLUg==
 
-"vue@^2.7.0 || ^3.5.11", vue@^3.0.0, "vue@^3.0.0-0 || ^2.6.0", vue@^3.2.25, vue@^3.5.0, vue@^3.5.13, vue@3.5.22:
+"vue@^2.7.0 || ^3.5.11", vue@^3.0.0, "vue@^3.0.0-0 || ^2.6.0", vue@^3.2.25, vue@^3.5.0, vue@^3.5.13, vue@>=3.0.0, vue@3.5.22:
   version "3.5.22"
   resolved "https://registry.npmmirror.com/vue/-/vue-3.5.22.tgz"
   integrity sha512-toaZjQ3a/G/mYaLSbV+QsQhIdMo9x5rrqIpYRObsJ6T/J+RyCSFwN2LHNVH9v8uIcljDNa3QzPVdv3Y6b9hAJQ==
@@ -4070,6 +4083,11 @@ vue-to-print@^1.5.1:
     "@vue/runtime-dom" "3.5.22"
     "@vue/server-renderer" "3.5.22"
     "@vue/shared" "3.5.22"
+
+vue3-apexcharts@^1.10.0:
+  version "1.11.1"
+  resolved "https://registry.npmjs.org/vue3-apexcharts/-/vue3-apexcharts-1.11.1.tgz"
+  integrity sha512-MbN3vg8bMG19wc0Lm1HkeQvODgLm56DgpIxtNUO0xpf/JCzYWVGE4jzXp2JISzy2s3Kul1yOxNQUYsLvKQ5L9g==
 
 vuetify@^3.0.0, vuetify@^3.11.2:
   version "3.11.2"

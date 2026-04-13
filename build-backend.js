@@ -108,21 +108,123 @@ function installProductionDeps() {
   }
 }
 
-function rebuildBetterSqlite() {
-  log('Rebuilding better-sqlite3...');
+function getBundledNodeVersion() {
+  if (!fs.existsSync(BUNDLED_NODE)) return null;
   try {
-    // First try: fetch prebuild binaries for the current platform/ABI.
-    execSync('npm rebuild better-sqlite3', {
-      cwd: DIST_DIR,
-      stdio: 'inherit',
-    });
-  } catch (err) {
-    warn(`Prebuild rebuild failed (${err.message}); falling back to --build-from-source`);
-    execSync('npm rebuild better-sqlite3 --build-from-source', {
-      cwd: DIST_DIR,
-      stdio: 'inherit',
-    });
+    const out = execSync(`"${BUNDLED_NODE}" -p "process.version"`, {
+      encoding: 'utf8',
+    }).trim();
+    // "v24.8.0" -> "24.8.0"
+    return out.replace(/^v/, '');
+  } catch {
+    return null;
   }
+}
+
+function findPrebuildInstallBin() {
+  // better-sqlite3 depends on prebuild-install. Depending on how npm hoists,
+  // it lives either at the top of dist-backend/node_modules or nested inside
+  // better-sqlite3/node_modules. Try both.
+  const candidates = [
+    path.join(DIST_DIR, 'node_modules', 'prebuild-install', 'bin.js'),
+    path.join(
+      DIST_DIR,
+      'node_modules',
+      'better-sqlite3',
+      'node_modules',
+      'prebuild-install',
+      'bin.js'
+    ),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return null;
+}
+
+function rebuildBetterSqlite() {
+  const systemVersion = process.version.replace(/^v/, '');
+  const targetVersion = getBundledNodeVersion();
+
+  log(`System Node:  v${systemVersion}`);
+  if (targetVersion) log(`Bundled Node: v${targetVersion}`);
+
+  // No bundled runtime reachable (e.g. running on Linux): just rebuild
+  // against the system Node so CI smoke tests still pass. The Windows
+  // build must then be produced on a Windows box where backend/bin/node.exe
+  // is present, and this function will take the branch below instead.
+  if (!targetVersion) {
+    log('Bundled Node runtime not available; running plain npm rebuild better-sqlite3');
+    try {
+      execSync('npm rebuild better-sqlite3', { cwd: DIST_DIR, stdio: 'inherit' });
+    } catch (err) {
+      warn(`Prebuild rebuild failed (${err.message}); falling back to --build-from-source`);
+      execSync('npm rebuild better-sqlite3 --build-from-source', {
+        cwd: DIST_DIR,
+        stdio: 'inherit',
+      });
+    }
+    return;
+  }
+
+  // Always rebuild against the bundled Node ABI — we do not care about the
+  // system Node ABI, because the .node file will only ever be loaded by
+  // backend/bin/node.exe at runtime.
+  const betterSqliteDir = path.join(DIST_DIR, 'node_modules', 'better-sqlite3');
+
+  // Strategy 1: download a precompiled prebuild for the target Node version.
+  // This is the fast, no-build-tools path and works whenever better-sqlite3
+  // publishes a prebuild for win32/x64 at that Node major.
+  const prebuildInstallBin = findPrebuildInstallBin();
+  if (prebuildInstallBin) {
+    log(
+      `Downloading better-sqlite3 prebuild for Node v${targetVersion} (win32/x64)...`
+    );
+    try {
+      // Delete the stale .node file first so a failed download cannot leave
+      // the wrong-ABI binary in place.
+      if (fs.existsSync(BETTER_SQLITE_NATIVE)) {
+        fs.rmSync(BETTER_SQLITE_NATIVE, { force: true });
+      }
+      execSync(
+        `node "${prebuildInstallBin}" --runtime=node --target=${targetVersion} --arch=x64 --platform=win32 --verbose`,
+        {
+          cwd: betterSqliteDir,
+          stdio: 'inherit',
+        }
+      );
+      if (fs.existsSync(BETTER_SQLITE_NATIVE)) {
+        log(`prebuild-install succeeded for Node v${targetVersion}`);
+        return;
+      }
+      warn('prebuild-install exited cleanly but produced no .node file; falling back');
+    } catch (err) {
+      warn(
+        `prebuild-install for target ${targetVersion} failed (${err.message}); falling back to build-from-source`
+      );
+    }
+  } else {
+    warn('prebuild-install binary not found inside dist-backend; falling back to build-from-source');
+  }
+
+  // Strategy 2: compile from source against the bundled Node's headers.
+  // This needs Python + VS Build Tools on Windows. node-gyp will fetch the
+  // correct Node headers automatically based on --target.
+  log(
+    `Compiling better-sqlite3 from source against Node v${targetVersion} headers...`
+  );
+  execSync('npm rebuild better-sqlite3 --build-from-source', {
+    cwd: DIST_DIR,
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      npm_config_runtime: 'node',
+      npm_config_target: targetVersion,
+      npm_config_target_arch: 'x64',
+      npm_config_target_platform: 'win32',
+      npm_config_build_from_source: 'true',
+    },
+  });
 }
 
 function verifyNativeBinary() {

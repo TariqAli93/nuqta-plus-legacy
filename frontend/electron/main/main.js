@@ -470,8 +470,8 @@ function createActivationWindow() {
   if (activationWindow) return;
 
   activationWindow = new BrowserWindow({
-    width: 540,
-    height: 500,
+    width: 600,
+    height: 650,
     resizable: false,
     center: true,
     frame: true,

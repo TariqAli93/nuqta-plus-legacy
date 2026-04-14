@@ -567,7 +567,10 @@ const applySaleCurrencyToItems = () => {
 
 /* 💳 خيارات نوع الدفع */
 const paymentTypes = computed(() => {
-  const types = [{ label: 'نقدي', value: 'cash' }];
+  const types = [
+    { label: 'نقدي', value: 'cash' },
+    { label: 'تقسيط', value: 'installment' },
+  ];
 
   return types;
 });

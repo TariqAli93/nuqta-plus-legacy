@@ -31,10 +31,10 @@
               <span>إعدادات العملة</span>
             </v-tab>
 
-            <!-- <v-tab value="backup">
+            <v-tab value="backup">
               <v-icon start>mdi-backup-restore</v-icon>
               <span>إدارة النسخ الاحتياطي</span>
-            </v-tab> -->
+            </v-tab>
             <v-tab value="license">
               <v-icon start>mdi-license</v-icon>
               <span>الترخيص</span>
@@ -55,9 +55,9 @@
             <CurrencySettings />
           </v-window-item>
 
-          <!-- <v-window-item value="backup" class="pa-0">
+          <v-window-item value="backup" class="pa-0">
             <BackupManager />
-          </v-window-item> -->
+          </v-window-item>
 
           <v-window-item value="license" class="pa-0">
             <LicenseStatus />
@@ -73,7 +73,7 @@ import { ref, onMounted } from 'vue';
 import { useSettingsStore } from '../stores/settings';
 import { useRoute } from 'vue-router';
 import CompanyInfoForm from '@/components/settings/CompanyInfoForm.vue';
-// import BackupManager from '@/components/settings/BackupManager.vue';
+import BackupManager from '@/components/settings/BackupManager.vue';
 import CurrencySettings from '@/components/settings/CurrencySettings.vue';
 import LicenseStatus from '@/components/settings/LicenseStatus.vue';
 
